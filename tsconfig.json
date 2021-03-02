@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/out-tsc/tools",
+        "rootDir": ".",
+        "module": "commonjs",
+        "target": "es5",
+        "types": [
+            "node"
+        ],
+        "sourceMap": true,
+        "resolveJsonModule": true,
+    },
+    "include": [
+        "**/*.ts"
+    ]
+}
