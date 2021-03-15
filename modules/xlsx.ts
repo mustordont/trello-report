@@ -1,15 +1,16 @@
 import * as XLSX from 'xlsx';
+import {IReportSheet} from './trello';
 
-// const data = [[1,2,3],[true, false, null, "sheetjs"],["foo","bar",new Date("2014-02-19T14:30Z"), "0.3"], ["baz", null, "qux"]]
-
-export function saveReport(data: any[][]): void {
-    /* original data */
+export function saveReport(data: IReportSheet[]): void {
     const filename = `./dist/webapps_report_${new Date().toLocaleDateString()}.xlsx`;
-    const ws_name = new Date().toLocaleDateString();
-    const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
 
-    /* add worksheet to workbook */
-    XLSX.utils.book_append_sheet(wb, ws, ws_name);
+    for(const i in data) {
+        // const data = [[1,2,3],[true, false, null, "sheetjs"],["foo","bar",new Date("2014-02-19T14:30Z"), "0.3"], ["baz", null, "qux"]]
+        const ws = XLSX.utils.aoa_to_sheet(data[i].data);
+        /* add worksheet to workbook */
+        XLSX.utils.book_append_sheet(wb, ws, data[i].label);
+    }
 
     /* write workbook */
     XLSX.writeFile(wb, filename);

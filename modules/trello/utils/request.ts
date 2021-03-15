@@ -2,7 +2,7 @@ const key = process.env.TRELLO_KEY;
 const token = process.env.TRELLO_TOKEN;
 
 import fetch from 'node-fetch';
-import {ICard} from '../card.interface';
+import {ICard} from '../trello-card.model';
 import {CustomFieldModel, ICustomFieldValue} from './custom-field.model';
 const PREFIX: string = 'https://api.trello.com/1';
 
@@ -39,7 +39,7 @@ export async function grabTrelloBoardData(boardId: string, donelistId: string): 
     const result: ICard[] = await Promise.all(
         cards.map(i => request(`/cards/${i.id}/customFieldItems`)
             .then((resultFields: ICustomFieldValue[]) => {
-                i['customFields'] = resultFields.map(i => new CustomFieldModel(i));
+                i.customFields = resultFields.map(i => new CustomFieldModel(i).serialize());
                 return i;
             })
         )

@@ -7,7 +7,7 @@ export interface ICustomFieldListOption {
     }
 }
 
-export interface ICustomField {
+export interface ICustomFieldDefinition {
     id: string;
     name: string;
     type: CustomFieldType;
@@ -21,8 +21,15 @@ export interface ICustomFieldValue {
     type: CustomFieldType;
 }
 
-export class CustomFieldModel implements ICustomField, Partial<ICustomFieldValue> {
-    public static DEFINITION: ICustomField[] = [];
+export interface ICustomField {
+    name: string;
+    value: any;
+    type: CustomFieldType;
+    id: string;
+}
+
+export class CustomFieldModel implements ICustomFieldDefinition, Partial<ICustomFieldValue> {
+    public static DEFINITION: ICustomFieldDefinition[] = [];
 
     public readonly id: string;
     public readonly name: string;
@@ -44,6 +51,15 @@ export class CustomFieldModel implements ICustomField, Partial<ICustomFieldValue
             case 'list':
                 this.value = options.find(i => i.id === value.idValue)?.value.text;
         }
+    }
+
+    serialize(): ICustomField {
+        return {
+            id: this.id,
+            name: this.name,
+            type: this.type,
+            value: this.value,
+        };
     }
 
     toString(): string {

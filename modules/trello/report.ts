@@ -1,68 +1,100 @@
-require('dotenv').config();
+import {CustomFieldModel, ICard, IReducedDateRecord, TrelloCard} from '../index';
 
-import {CustomFieldModel, ICard} from '../index';
-import {dateDiff, parseDate} from './utils';
-
-interface IReducedDateRecord {
-    title: string;
-    date: Date;
-    value: Date | number;
+export interface IReportSheet {
+    label: string;
+    data: any[][];
 }
 
-export function makeTrelloReport(cards: ICard[]): any[][] {
-    const result: any[][] = [];
-    result.push([
-        'card name', 'link', ...CustomFieldModel.DEFINITION.map(i => i.name)
-    ]);
-    const listNames: string[] = [];
+export class TrelloParser {
+    cards: TrelloCard[] = [];
+    listNames: string[] = [];
+    reportStartDate: Date;
+    reportFinishDate: Date;
 
-    result.push(
-        ...cards.map(card => {
-            const customFieldsValues: any[] = CustomFieldModel.DEFINITION.map(i => {
-                const value = (card['customFields'] as CustomFieldModel[]).find(j => i.id === j.id);
-                return value?.value;
-            });
-            const lists: string[] = card.desc?.split('\n\n')[1]?.split('\n') ?? [];
-            const [created, ...dateLists] = lists.reduce((acc: IReducedDateRecord[], item: string) => {
-                try {
-                    let dateString: string;
-                    if( item.includes(': ')) {
-                        dateString = item.split(': ')[1];
-                    } else {
-                        const date = item.match(/(\s\w+\s\d+,\s\d+$|\d+\.\d+\.\d+$)/);
-                        if (date) {
-                            dateString = date[0];
-                        } else {
-                            dateString = null;
-                        }
+    constructor(cards: ICard[]) {
+        this.cards = cards.map(i => new TrelloCard(i));
+    }
+
+    public makeGeneralReport(): IReportSheet {
+        const result: any[][] = [];
+        result.push([
+            'card name', 'link', ...CustomFieldModel.DEFINITION.map(i => i.name)
+        ]);
+
+        result.push(
+            ...this.cards.map((card: TrelloCard) => {
+                const mappedCustomFieldsValues: any[] = CustomFieldModel.DEFINITION.map(i => {
+                    const value = card.customFields.find(j => i.id === j.id);
+                    return value?.value;
+                });
+
+                card.records.forEach(i => {
+                    if (!this.listNames.includes(i.title)) {
+                        this.listNames.push(i.title);
                     }
-                    const dateRecord: IReducedDateRecord = {
-                        title: item.replace(dateString, ''),
-                        date: parseDate(dateString),
-                        value: !!acc.length ? dateDiff(acc[acc.length-1].date, parseDate(dateString)) : 0,
-                    };
-                    if (!listNames.includes(dateRecord.title)) {
-                        listNames.push(dateRecord.title);
-                    }
-                    acc.push(dateRecord);
-                } catch(e) {
-                    debugger
-                    console.error(e);
+                });
+                const [created, ...dateLists] = card.records;
+
+                const orderedCardLists = this.listNames.map((title) => {
+                    return dateLists.find(i => i.title === title)?.value ?? '';
+                });
+
+                if (!this.reportStartDate || this.reportStartDate > created.date) {
+                    this.reportStartDate = created.date;
                 }
-                return acc;
-            }, []);
-            const orderedCardLists = listNames.map((title) => {
-                return dateLists.find(i => i.title === title)?.value ?? '';
-            })
-            return [
-                card.name, card.shortUrl, ...customFieldsValues,
-                // maps to fields below
-                created.date, dateLists[dateLists.length-1]?.date, card.desc, ...orderedCardLists
-            ];
-        })
-    );
-    // add the reported list names
-    result[0].push('Created:', 'Finished:', 'Description', ...listNames.map(i => i.replace('Done 🚀', '')));
 
-    return result;
+                const doneDate: Date = dateLists[dateLists.length-1]?.date
+                if (!this.reportFinishDate || this.reportFinishDate < doneDate) {
+                    this.reportFinishDate = doneDate;
+                }
+
+                return [
+                    card.name, card.shortUrl, ...mappedCustomFieldsValues,
+                    // maps to fields below
+                    created.date, doneDate, card.desc, ...orderedCardLists
+                ];
+            })
+        );
+        // add the reported list names
+        result[0].push('Created:', 'Finished:', 'Description', ...this.listNames.map(i => i.replace('Done 🚀', '')));
+
+        return {
+            label: new Date().toLocaleDateString(),
+            data: result,
+        };
+    }
+
+    public makeCDFReport(): IReportSheet {
+        const result: any[][] = [];
+        result.push(['Date', ...this.listNames]);
+
+        for(const currentDate = this.reportStartDate; currentDate < this.reportFinishDate; currentDate.setDate(currentDate.getDate() + 1)) {
+            const dayResult: any[] = [currentDate.toLocaleDateString()];
+            for(const list of this.listNames) {
+                const cardsCount = this.cards.reduce((acc, item) => {
+                    const index = item.records.findIndex(i => i.title === list);
+                    if (index > 0 && item.records[index - 1].date <= currentDate && currentDate <= item.records[index].date) {
+                        return ++acc;
+                    } else {
+                        return acc;
+                    }
+                }, 0);
+                dayResult.push(cardsCount);
+            }
+            result.push(dayResult);
+        }
+        return {
+            label: 'CFD',
+            data: result,
+        };
+    }
+}
+
+export function makeTrelloReport(cards: ICard[]): IReportSheet[] {
+    const report: IReportSheet[] = [];
+    const parser: TrelloParser = new TrelloParser(cards);
+    report.push(parser.makeGeneralReport());
+    report.push(parser.makeCDFReport());
+
+    return report;
 }
