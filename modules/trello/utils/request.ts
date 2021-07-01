@@ -1,4 +1,4 @@
-const key = process.env.TRELLO_KEY;
+const key = process.env.TRELLO_API_KEY;
 const token = process.env.TRELLO_TOKEN;
 
 import fetch from 'node-fetch';

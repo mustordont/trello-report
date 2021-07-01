@@ -42,6 +42,10 @@ export class TrelloCard implements ICard {
         const records: string[] = data.desc?.split('\n\n')[1]?.split('\n') ?? [];
         this.records = records.reduce((acc: IReducedDateRecord[], item: string) => {
             try {
+                if (!item) {
+                    return acc;
+                }
+
                 let dateString: string;
                 if( item.includes(': ')) {
                     dateString = item.split(': ')[1];
@@ -61,6 +65,7 @@ export class TrelloCard implements ICard {
                 acc.push(dateRecord);
             } catch(e) {
                 debugger
+                console.error('Troubles with', data, item);
                 console.error(e);
             }
             return acc;

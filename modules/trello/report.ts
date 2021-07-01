@@ -1,4 +1,4 @@
-import {CustomFieldModel, ICard, IReducedDateRecord, TrelloCard} from '../index';
+import {CustomFieldModel, ICard, TrelloCard} from '../index';
 
 export interface IReportSheet {
     label: string;
@@ -33,6 +33,11 @@ export class TrelloParser {
                         this.listNames.push(i.title);
                     }
                 });
+
+                if (!card.records.length) {
+                    return [card.name, card.shortUrl];
+                }
+
                 const [created, ...dateLists] = card.records;
 
                 const orderedCardLists = this.listNames.map((title) => {
